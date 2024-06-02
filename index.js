@@ -38,7 +38,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
 
         try {
-            const response = await axios.post('http://localhost:3000/setchannel', {
+            const response = await axios.post('https://my-web-api.onrender.com/setchannel', {
                 guildId: interaction.guildId,
                 channelId: channel.id
             });
@@ -137,7 +137,7 @@ const startPolling = () => {
                     latestPostId = latestPost.id; // Update the latest post ID
 
                     for (const guildId in channelConfig) {
-                        const { data: channelConfig } = await axios.get(`http://localhost:3000/getchannel/${guildId}`);
+                        const { data: channelConfig } = await axios.get(`https://my-web-api.onrender.com/getchannel/${guildId}`);
                         const channelId = channelConfig.channelId;
                         const channel = client.channels.cache.get(channelId);
 
