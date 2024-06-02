@@ -156,9 +156,14 @@ const startPolling = () => {
                             embed.setImage(imageUrl);
                         }
 
+                        console.log(`Posting to channel ${channel.name} in guild ${guildId}`);
                         await channel.send({ embeds: [embed] });
                     }
+                } else {
+                    console.log('No new posts to publish.');
                 }
+            } else {
+                console.log('No posts available during polling.');
             }
         } catch (error) {
             console.error('Error during polling:', error);
