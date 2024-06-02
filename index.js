@@ -38,13 +38,22 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
 
         try {
-            await axios.post('http://localhost:3000/setchannel', {
+            const response = await axios.post('http://localhost:3000/setchannel', {
                 guildId: interaction.guildId,
                 channelId: channel.id
             });
             await interaction.reply(`Set the post channel to ${channel.name}`);
         } catch (error) {
             console.error('Error setting channel:', error);
+            if (error.response) {
+                console.error('Response data:', error.response.data);
+                console.error('Response status:', error.response.status);
+                console.error('Response headers:', error.response.headers);
+            } else if (error.request) {
+                console.error('Request data:', error.request);
+            } else {
+                console.error('Error message:', error.message);
+            }
             await interaction.reply('Error setting channel.');
         }
     }
