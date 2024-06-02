@@ -1,11 +1,17 @@
-const { REST, Routes } = require('discord.js');
+const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 require('dotenv').config();
 
 const commands = [
-    {
-        name: 'posts',
-        description: 'Fetch and display the latest posts'
-    },
+    new SlashCommandBuilder()
+        .setName('setchannel')
+        .setDescription('Set the channel for the bot to post new content.')
+        .addChannelOption(option =>
+            option.setName('channel')
+                .setDescription('The channel to post new content in')
+                .setRequired(true)),
+    new SlashCommandBuilder()
+        .setName('posts')
+        .setDescription('Fetch and display the latest posts'),
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
