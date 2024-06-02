@@ -10,8 +10,6 @@ const client = new Client({
     ]
 });
 
-// In-memory storage for channel configurations and latest post ID
-const channelConfig = {};
 let latestPostId = null;
 
 client.once(Events.ClientReady, () => {
@@ -39,10 +37,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
             return;
         }
 
-        // Store the channel ID in memory
-        channelConfig[interaction.guildId] = channel.id;
-
-        await interaction.reply(`Set the post channel to ${channel.name}`);
+        try {
+            await axios.post('http://localhost:3000/setchannel', {
+                guildId: interaction.guildId,
+                channelId: channel.id
+            });
+            await interaction.reply(`Set the post channel to ${channel.name}`);
+        } catch (error) {
+            console.error('Error setting channel:', error);
+            await interaction.reply('Error setting channel.');
+        }
     }
 
     if (commandName === 'posts') {
@@ -62,35 +66,33 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 return;
             }
 
-            const embeds = posts.map(post => {
-                const embed = new EmbedBuilder()
-                    .setTitle(post.projectName)
-                    .setDescription(post.description || 'No description provided.')
-                    .addFields(
-                        { name: 'Price', value: post.price.toString(), inline: true },
-                        { name: 'Whitelist Price', value: post.wlPrice.toString(), inline: true },
-                        { name: 'Date', value: new Date(post.date).toLocaleDateString(), inline: true },
-                        { name: 'Time', value: post.time, inline: true },
-                        { name: 'Supply', value: post.supply.toString(), inline: true },
-                        { name: 'Likes', value: post.likes.length.toString(), inline: true },
-                        { name: 'Website', value: post.website || 'No website provided.' },
-                        { name: 'Twitter', value: `[Twitter](https://twitter.com/${post.twitter || ''})`, inline: true },
-                        { name: 'Discord', value: `[Discord](${post.discord || ''})`, inline: true },
-                        { name: 'Telegram', value: `[Telegram](${post.telegram || ''})`, inline: true }
-                    );
+            const latestPost = posts[0]; // Only take the latest post
 
-                if (post.image) {
-                    const imageUrl = `${process.env.BACKEND_URL}/uploads/${post.image}`;
-                    console.log(`Image URL: ${imageUrl}`);
-                    embed.setImage(imageUrl);
-                }
+            const embed = new EmbedBuilder()
+                .setTitle(latestPost.projectName)
+                .setDescription(latestPost.description || 'No description provided.')
+                .addFields(
+                    { name: 'Price', value: latestPost.price.toString(), inline: true },
+                    { name: 'Whitelist Price', value: latestPost.wlPrice.toString(), inline: true },
+                    { name: 'Date', value: new Date(latestPost.date).toLocaleDateString(), inline: true },
+                    { name: 'Time', value: latestPost.time, inline: true },
+                    { name: 'Supply', value: latestPost.supply.toString(), inline: true },
+                    { name: 'Likes', value: latestPost.likes.length.toString(), inline: true },
+                    { name: 'Website', value: latestPost.website || 'No website provided.' },
+                    { name: 'Twitter', value: `[Twitter](https://twitter.com/${latestPost.twitter || ''})`, inline: true },
+                    { name: 'Discord', value: `[Discord](${latestPost.discord || ''})`, inline: true },
+                    { name: 'Telegram', value: `[Telegram](${latestPost.telegram || ''})`, inline: true }
+                );
 
-                return embed;
-            });
+            if (latestPost.image) {
+                const imageUrl = `${process.env.BACKEND_URL}/uploads/${latestPost.image}`;
+                console.log(`Image URL: ${imageUrl}`);
+                embed.setImage(imageUrl);
+            }
 
-            console.log('Constructed embeds:', embeds); // Log constructed embeds
+            console.log('Constructed embed:', embed); // Log constructed embed
 
-            await interaction.editReply({ embeds });
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Error fetching posts:', error);
             await interaction.editReply(`Error fetching posts: ${error.message}`);
@@ -126,7 +128,8 @@ const startPolling = () => {
                     latestPostId = latestPost.id; // Update the latest post ID
 
                     for (const guildId in channelConfig) {
-                        const channelId = channelConfig[guildId];
+                        const { data: channelConfig } = await axios.get(`http://localhost:3000/getchannel/${guildId}`);
+                        const channelId = channelConfig.channelId;
                         const channel = client.channels.cache.get(channelId);
 
                         if (!channel) {
