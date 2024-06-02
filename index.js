@@ -100,6 +100,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 client.login(process.env.DISCORD_TOKEN);
 
+client.on('error', console.error);
+client.on('reconnecting', () => console.log('Reconnecting...'));
+client.on('resume', () => console.log('Connection resumed.'));
+client.on('disconnect', (event) => {
+    console.log(`Disconnected: ${event.reason} (${event.code})`);
+});
+
 const startPolling = () => {
     setInterval(async () => {
         try {
@@ -158,3 +165,5 @@ const startPolling = () => {
         }
     }, 60000); // Poll every 60 seconds
 };
+
+startPolling();
