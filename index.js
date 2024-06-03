@@ -11,6 +11,7 @@ const client = new Client({
 });
 
 let latestPostId = null;
+let channelConfig = {}; // Define channelConfig here
 
 client.once(Events.ClientReady, () => {
     console.log('Discord bot is ready!');
@@ -38,7 +39,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
 
         try {
-            await axios.post(`${process.env.BACKEND_URL}/api/nftdrops/setchannel`, {
+            const response = await axios.post(`${process.env.BACKEND_URL}/api/nftdrops/setchannel`, {
                 guildId: interaction.guildId,
                 channelId: channel.id
             });
@@ -201,4 +202,29 @@ const startPolling = () => {
                                 { name: 'Likes', value: latestPost.likes.length.toString(), inline: true },
                                 { name: 'Website', value: latestPost.website || 'No website provided.' },
                                 { name: 'Twitter', value: `[Twitter](https://twitter.com/${latestPost.twitter || ''})`, inline: true },
-                                { name: 'Discord', value: `[Discord](${latestPost.discord || ''})`, inline: true
+                                { name: 'Discord', value: `[Discord](${latestPost.discord || ''})`, inline: true },
+                                { name: 'Telegram', value: `[Telegram](${latestPost.telegram || ''})`, inline: true }
+                            );
+
+                        if (latestPost.image) {
+                            const imageUrl = `${process.env.BACKEND_URL}/uploads/${latestPost.image}`;
+                            console.log(`Polling Image URL: ${imageUrl}`);
+                            embed.setImage(imageUrl);
+                        }
+
+                        console.log(`Posting to channel ${channel.name} in guild ${guildId}`);
+                        await channel.send({ embeds: [embed] });
+                    }
+                } else {
+                    console.log('No new posts to publish.');
+                }
+            } else {
+                console.log('No posts available during polling.');
+            }
+        } catch (error) {
+            console.error('Error during polling:', error);
+        }
+    }, 60000); // Poll every 60 seconds
+};
+
+startPolling();
