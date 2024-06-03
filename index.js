@@ -58,7 +58,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
     }
 
-    if (commandName === 'posts') {
+    if (commandName === 'latest') {
         await interaction.deferReply(); // Acknowledge the interaction
 
         try {
@@ -102,6 +102,58 @@ client.on(Events.InteractionCreate, async (interaction) => {
             console.log('Constructed embed:', embed); // Log constructed embed
 
             await interaction.editReply({ embeds: [embed] });
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+            await interaction.editReply(`Error fetching posts: ${error.message}`);
+        }
+    }
+
+    if (commandName === 'alldrops') {
+        await interaction.deferReply(); // Acknowledge the interaction
+
+        try {
+            const url = `${process.env.BACKEND_URL}/api/nftdrops/approved`;
+            console.log(`Requesting data from: ${url}`);
+
+            const response = await axios.get(url);
+            const posts = response.data;
+
+            console.log('Fetched posts:', posts); // Log fetched posts
+
+            if (posts.length === 0) {
+                await interaction.editReply('No posts available.');
+                return;
+            }
+
+            const embeds = posts.map(post => {
+                const embed = new EmbedBuilder()
+                    .setTitle(post.projectName)
+                    .setDescription(post.description || 'No description provided.')
+                    .addFields(
+                        { name: 'Price', value: post.price.toString(), inline: true },
+                        { name: 'Whitelist Price', value: post.wlPrice.toString(), inline: true },
+                        { name: 'Date', value: new Date(post.date).toLocaleDateString(), inline: true },
+                        { name: 'Time', value: post.time, inline: true },
+                        { name: 'Supply', value: post.supply.toString(), inline: true },
+                        { name: 'Likes', value: post.likes.length.toString(), inline: true },
+                        { name: 'Website', value: post.website || 'No website provided.' },
+                        { name: 'Twitter', value: `[Twitter](https://twitter.com/${post.twitter || ''})`, inline: true },
+                        { name: 'Discord', value: `[Discord](${post.discord || ''})`, inline: true },
+                        { name: 'Telegram', value: `[Telegram](${post.telegram || ''})`, inline: true }
+                    );
+
+                if (post.image) {
+                    const imageUrl = `${process.env.BACKEND_URL}/uploads/${post.image}`;
+                    console.log(`Image URL: ${imageUrl}`);
+                    embed.setImage(imageUrl);
+                }
+
+                return embed;
+            });
+
+            console.log('Constructed embeds:', embeds); // Log constructed embeds
+
+            await interaction.editReply({ embeds });
         } catch (error) {
             console.error('Error fetching posts:', error);
             await interaction.editReply(`Error fetching posts: ${error.message}`);
