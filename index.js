@@ -11,7 +11,7 @@ const client = new Client({
 });
 
 let latestPostId = null;
-let channelConfig = {}; // Define channelConfig here
+let channelConfig = {}; // Initialize channelConfig here
 
 client.once(Events.ClientReady, () => {
     console.log('Discord bot is ready!');
@@ -46,11 +46,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
             await interaction.reply(`Set the post channel to ${channel.name}`);
         } catch (error) {
             console.error('Error setting channel:', error);
+            if (error.response) {
+                console.error('Response data:', error.response.data);
+                console.error('Response status:', error.response.status);
+                console.error('Response headers:', error.response.headers);
+            } else if (error.request) {
+                console.error('Request data:', error.request);
+            } else {
+                console.error('Error message:', error.message);
+            }
             await interaction.reply('Error setting channel.');
         }
     }
 
-    if (commandName === 'latest') {
+    if (commandName === 'latest') { // Updated command name
         await interaction.deferReply(); // Acknowledge the interaction
 
         try {
@@ -100,7 +109,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
     }
 
-    if (commandName === 'alldrops') {
+    if (commandName === 'alldrops') { // New command for fetching all posts
         await interaction.deferReply(); // Acknowledge the interaction
 
         try {
@@ -177,8 +186,8 @@ const startPolling = () => {
                 const latestPost = posts[0];
 
                 // Check if the latest post is new
-                if (latestPost.id !== latestPostId) {
-                    latestPostId = latestPost.id; // Update the latest post ID
+                if (latestPost._id !== latestPostId) {
+                    latestPostId = latestPost._id; // Update the latest post ID
 
                     for (const guildId in channelConfig) {
                         const { data: channelConfig } = await axios.get(`${process.env.BACKEND_URL}/api/nftdrops/getchannel/${guildId}`);
