@@ -1,5 +1,7 @@
 const { Client, GatewayIntentBits, Events, EmbedBuilder, PermissionsBitField, ChannelType } = require('discord.js');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const client = new Client({
@@ -11,7 +13,18 @@ const client = new Client({
 });
 
 let latestPostId = null;
-let channelConfig = {}; // Initialize channelConfig here
+const channelConfigPath = path.join(__dirname, 'channelConfig.json');
+let channelConfig = {};
+
+// Load channelConfig from file
+if (fs.existsSync(channelConfigPath)) {
+    const data = fs.readFileSync(channelConfigPath);
+    channelConfig = JSON.parse(data);
+}
+
+const saveChannelConfig = () => {
+    fs.writeFileSync(channelConfigPath, JSON.stringify(channelConfig, null, 2));
+};
 
 client.once(Events.ClientReady, () => {
     console.log('Discord bot is ready!');
@@ -59,24 +72,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
     }
 
-    if (commandName === 'latest') { // Updated command name
-        await interaction.deferReply(); // Acknowledge the interaction
+    if (commandName === 'latest') {
+        await interaction.deferReply();
 
         try {
             const url = `${process.env.BACKEND_URL}/api/nftdrops/approved`;
-            console.log(`Requesting data from: ${url}`);
-
             const response = await axios.get(url);
             const posts = response.data;
-
-            console.log('Fetched posts:', posts); // Log fetched posts
 
             if (posts.length === 0) {
                 await interaction.editReply('No posts available.');
                 return;
             }
 
-            const latestPost = posts[0]; // Only take the latest post
+            const latestPost = posts[0];
 
             const embed = new EmbedBuilder()
                 .setTitle(latestPost.projectName)
@@ -96,11 +105,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
             if (latestPost.image) {
                 const imageUrl = `${process.env.BACKEND_URL}/uploads/${latestPost.image}`;
-                console.log(`Image URL: ${imageUrl}`);
                 embed.setImage(imageUrl);
             }
-
-            console.log('Constructed embed:', embed); // Log constructed embed
 
             await interaction.editReply({ embeds: [embed] });
         } catch (error) {
@@ -109,17 +115,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
     }
 
-    if (commandName === 'alldrops') { // New command for fetching all posts
-        await interaction.deferReply(); // Acknowledge the interaction
+    if (commandName === 'alldrops') {
+        await interaction.deferReply();
 
         try {
             const url = `${process.env.BACKEND_URL}/api/nftdrops/approved`;
-            console.log(`Requesting data from: ${url}`);
-
             const response = await axios.get(url);
             const posts = response.data;
-
-            console.log('Fetched posts:', posts); // Log fetched posts
 
             if (posts.length === 0) {
                 await interaction.editReply('No posts available.');
@@ -145,14 +147,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
                 if (post.image) {
                     const imageUrl = `${process.env.BACKEND_URL}/uploads/${post.image}`;
-                    console.log(`Image URL: ${imageUrl}`);
                     embed.setImage(imageUrl);
                 }
 
                 return embed;
             });
-
-            console.log('Constructed embeds:', embeds); // Log constructed embeds
 
             await interaction.editReply({ embeds });
         } catch (error) {
@@ -180,18 +179,15 @@ const startPolling = () => {
             const response = await axios.get(url);
             const posts = response.data;
 
-            console.log('Fetched posts during polling:', posts); // Log fetched posts
-
             if (posts.length > 0) {
                 const latestPost = posts[0];
 
-                // Check if the latest post is new
                 if (latestPost._id !== latestPostId) {
-                    latestPostId = latestPost._id; // Update the latest post ID
+                    latestPostId = latestPost._id;
 
                     for (const guildId in channelConfig) {
-                        const { data: channelConfig } = await axios.get(`${process.env.BACKEND_URL}/api/nftdrops/getchannel/${guildId}`);
-                        const channelId = channelConfig.channelId;
+                        const config = await axios.get(`${process.env.BACKEND_URL}/api/nftdrops/getchannel/${guildId}`);
+                        const channelId = config.data.channelId;
                         const channel = client.channels.cache.get(channelId);
 
                         if (!channel) {
@@ -216,12 +212,10 @@ const startPolling = () => {
                             );
 
                         if (latestPost.image) {
-                            const imageUrl = `${process.env.BACKEND_URL}/uploads/${latestPost.image}`;
-                            console.log(`Polling Image URL: ${imageUrl}`);
+                            const imageUrl = latestPost.image;
                             embed.setImage(imageUrl);
                         }
 
-                        console.log(`Posting to channel ${channel.name} in guild ${guildId}`);
                         await channel.send({ embeds: [embed] });
                     }
                 } else {
