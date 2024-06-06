@@ -104,7 +104,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 );
 
             if (latestPost.image) {
-                const imageUrl = `${process.env.BACKEND_URL}/uploads/${latestPost.image}`;
+                const imageUrl = latestPost.image; // This should be the full URL from your S3 bucket
                 embed.setImage(imageUrl);
             }
 
@@ -146,7 +146,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
                     );
 
                 if (post.image) {
-                    const imageUrl = `${process.env.BACKEND_URL}/uploads/${post.image}`;
+                    const imageUrl = post.image; // This should be the full URL from your S3 bucket
                     embed.setImage(imageUrl);
                 }
 
@@ -212,7 +212,7 @@ const startPolling = () => {
                             );
 
                         if (latestPost.image) {
-                            const imageUrl = latestPost.image;
+                            const imageUrl = latestPost.image; // This should be the full URL from your S3 bucket
                             embed.setImage(imageUrl);
                         }
 
