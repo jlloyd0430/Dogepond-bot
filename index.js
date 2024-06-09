@@ -46,6 +46,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
 
         const channel = interaction.options.getChannel('channel');
+        const dropType = interaction.options.getString('droptype');
         if (!channel || channel.type !== ChannelType.GuildText) {
             await interaction.reply('Please enter a valid text channel.');
             return;
@@ -54,9 +55,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
         try {
             const response = await axios.post(`${process.env.BACKEND_URL}/api/nftdrops/setchannel`, {
                 guildId: interaction.guildId,
-                channelId: channel.id
+                channelId: channel.id,
+                dropType: dropType
             });
-            await interaction.reply(`Set the post channel to ${channel.name}`);
+
+            channelConfig[interaction.guildId] = { channelId: channel.id, dropType: dropType };
+            saveChannelConfig();
+
+            await interaction.reply(`Set the post channel to ${channel.name} for ${dropType} drops`);
         } catch (error) {
             console.error('Error setting channel:', error);
             if (error.response) {
@@ -75,8 +81,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (commandName === 'latest') {
         await interaction.deferReply();
 
+        const dropType = interaction.options.getString('droptype');
         try {
-            const url = `${process.env.BACKEND_URL}/api/nftdrops/approved`;
+            const url = `${process.env.BACKEND_URL}/api/nftdrops/approved?droptype=${dropType}`;
             const response = await axios.get(url);
             const posts = response.data;
 
@@ -241,9 +248,15 @@ const startPolling = () => {
                         const config = await axios.get(`${process.env.BACKEND_URL}/api/nftdrops/getchannel/${guildId}`);
                         const channelId = config.data.channelId;
                         const channel = client.channels.cache.get(channelId);
+                        const dropType = config.data.dropType;
 
                         if (!channel) {
                             console.error(`Channel not found for guild ${guildId}`);
+                            continue;
+                        }
+
+                        if (dropType !== 'any' && latestPost.dropType !== dropType) {
+                            console.log(`Skipping post of type ${latestPost.dropType} for guild ${guildId} with configured type ${dropType}`);
                             continue;
                         }
 
