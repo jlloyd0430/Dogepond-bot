@@ -91,17 +91,43 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 .setTitle(latestPost.projectName)
                 .setDescription(latestPost.description || 'No description provided.')
                 .addFields(
-                    { name: 'Price', value: latestPost.price.toString(), inline: true },
-                    { name: 'Whitelist Price', value: latestPost.wlPrice.toString(), inline: true },
-                    { name: 'Date', value: new Date(latestPost.date).toLocaleDateString(), inline: true },
+                    { name: 'Drop Type', value: latestPost.dropType, inline: true },
+                    { name: 'Date', value: latestPost.date === 'TBA' ? 'TBA' : new Date(latestPost.date).toLocaleDateString(), inline: true },
                     { name: 'Time', value: latestPost.time, inline: true },
                     { name: 'Supply', value: latestPost.supply.toString(), inline: true },
-                    { name: 'Likes', value: latestPost.likes.length.toString(), inline: true },
-                    { name: 'Website', value: latestPost.website || 'No website provided.' },
-                    { name: 'Twitter', value: `[Twitter](https://twitter.com/${latestPost.twitter || ''})`, inline: true },
-                    { name: 'Discord', value: `[Discord](${latestPost.discord || ''})`, inline: true },
-                    { name: 'Telegram', value: `[Telegram](${latestPost.telegram || ''})`, inline: true }
+                    { name: 'Likes', value: latestPost.likes.length.toString(), inline: true }
                 );
+
+            // Add price info based on drop type
+            if (latestPost.dropType === 'new mint') {
+                embed.addFields(
+                    { name: 'Price', value: latestPost.price !== undefined ? latestPost.price.toString() : 'N/A', inline: true },
+                    { name: 'Whitelist Price', value: latestPost.wlPrice !== undefined ? latestPost.wlPrice.toString() : 'N/A', inline: true }
+                );
+            } else if (latestPost.dropType === 'auction') {
+                embed.addFields(
+                    { name: 'Starting Price', value: latestPost.startingPrice !== undefined ? latestPost.startingPrice.toString() : 'N/A', inline: true },
+                    { name: 'Marketplace Link', value: latestPost.marketplaceLink ? `[Link](${latestPost.marketplaceLink})` : 'N/A', inline: true }
+                );
+            } else if (latestPost.dropType === 'airdrop') {
+                embed.addFields(
+                    { name: 'Project Link', value: latestPost.projectLink ? `[Link](${latestPost.projectLink})` : 'N/A', inline: true }
+                );
+            }
+
+            // Add additional links if available
+            if (latestPost.website) {
+                embed.addFields({ name: 'Website', value: `[Website](${latestPost.website})`, inline: true });
+            }
+            if (latestPost.xCom) {
+                embed.addFields({ name: 'X.com', value: `[X.com](${latestPost.xCom})`, inline: true });
+            }
+            if (latestPost.telegram) {
+                embed.addFields({ name: 'Telegram', value: `[Telegram](${latestPost.telegram})`, inline: true });
+            }
+            if (latestPost.discord) {
+                embed.addFields({ name: 'Discord', value: `[Discord](${latestPost.discord})`, inline: true });
+            }
 
             if (latestPost.image) {
                 const imageUrl = latestPost.image; // This should be the full URL from your S3 bucket
@@ -133,17 +159,43 @@ client.on(Events.InteractionCreate, async (interaction) => {
                     .setTitle(post.projectName)
                     .setDescription(post.description || 'No description provided.')
                     .addFields(
-                        { name: 'Price', value: post.price.toString(), inline: true },
-                        { name: 'Whitelist Price', value: post.wlPrice.toString(), inline: true },
-                        { name: 'Date', value: new Date(post.date).toLocaleDateString(), inline: true },
+                        { name: 'Drop Type', value: post.dropType, inline: true },
+                        { name: 'Date', value: post.date === 'TBA' ? 'TBA' : new Date(post.date).toLocaleDateString(), inline: true },
                         { name: 'Time', value: post.time, inline: true },
                         { name: 'Supply', value: post.supply.toString(), inline: true },
-                        { name: 'Likes', value: post.likes.length.toString(), inline: true },
-                        { name: 'Website', value: post.website || 'No website provided.' },
-                        { name: 'Twitter', value: `[Twitter](https://twitter.com/${post.twitter || ''})`, inline: true },
-                        { name: 'Discord', value: `[Discord](${post.discord || ''})`, inline: true },
-                        { name: 'Telegram', value: `[Telegram](${post.telegram || ''})`, inline: true }
+                        { name: 'Likes', value: post.likes.length.toString(), inline: true }
                     );
+
+                // Add price info based on drop type
+                if (post.dropType === 'new mint') {
+                    embed.addFields(
+                        { name: 'Price', value: post.price !== undefined ? post.price.toString() : 'N/A', inline: true },
+                        { name: 'Whitelist Price', value: post.wlPrice !== undefined ? post.wlPrice.toString() : 'N/A', inline: true }
+                    );
+                } else if (post.dropType === 'auction') {
+                    embed.addFields(
+                        { name: 'Starting Price', value: post.startingPrice !== undefined ? post.startingPrice.toString() : 'N/A', inline: true },
+                        { name: 'Marketplace Link', value: post.marketplaceLink ? `[Link](${post.marketplaceLink})` : 'N/A', inline: true }
+                    );
+                } else if (post.dropType === 'airdrop') {
+                    embed.addFields(
+                        { name: 'Project Link', value: post.projectLink ? `[Link](${post.projectLink})` : 'N/A', inline: true }
+                    );
+                }
+
+                // Add additional links if available
+                if (post.website) {
+                    embed.addFields({ name: 'Website', value: `[Website](${post.website})`, inline: true });
+                }
+                if (post.xCom) {
+                    embed.addFields({ name: 'X.com', value: `[X.com](${post.xCom})`, inline: true });
+                }
+                if (post.telegram) {
+                    embed.addFields({ name: 'Telegram', value: `[Telegram](${post.telegram})`, inline: true });
+                }
+                if (post.discord) {
+                    embed.addFields({ name: 'Discord', value: `[Discord](${post.discord})`, inline: true });
+                }
 
                 if (post.image) {
                     const imageUrl = post.image; // This should be the full URL from your S3 bucket
@@ -199,17 +251,43 @@ const startPolling = () => {
                             .setTitle(latestPost.projectName)
                             .setDescription(latestPost.description || 'No description provided.')
                             .addFields(
-                                { name: 'Price', value: latestPost.price.toString(), inline: true },
-                                { name: 'Whitelist Price', value: latestPost.wlPrice.toString(), inline: true },
-                                { name: 'Date', value: new Date(latestPost.date).toLocaleDateString(), inline: true },
+                                { name: 'Drop Type', value: latestPost.dropType, inline: true },
+                                { name: 'Date', value: latestPost.date === 'TBA' ? 'TBA' : new Date(latestPost.date).toLocaleDateString(), inline: true },
                                 { name: 'Time', value: latestPost.time, inline: true },
                                 { name: 'Supply', value: latestPost.supply.toString(), inline: true },
-                                { name: 'Likes', value: latestPost.likes.length.toString(), inline: true },
-                                { name: 'Website', value: latestPost.website || 'No website provided.' },
-                                { name: 'Twitter', value: `[Twitter](https://twitter.com/${latestPost.twitter || ''})`, inline: true },
-                                { name: 'Discord', value: `[Discord](${latestPost.discord || ''})`, inline: true },
-                                { name: 'Telegram', value: `[Telegram](${latestPost.telegram || ''})`, inline: true }
+                                { name: 'Likes', value: latestPost.likes.length.toString(), inline: true }
                             );
+
+                        // Add price info based on drop type
+                        if (latestPost.dropType === 'new mint') {
+                            embed.addFields(
+                                { name: 'Price', value: latestPost.price !== undefined ? latestPost.price.toString() : 'N/A', inline: true },
+                                { name: 'Whitelist Price', value: latestPost.wlPrice !== undefined ? latestPost.wlPrice.toString() : 'N/A', inline: true }
+                            );
+                        } else if (latestPost.dropType === 'auction') {
+                            embed.addFields(
+                                { name: 'Starting Price', value: latestPost.startingPrice !== undefined ? latestPost.startingPrice.toString() : 'N/A', inline: true },
+                                { name: 'Marketplace Link', value: latestPost.marketplaceLink ? `[Link](${latestPost.marketplaceLink})` : 'N/A', inline: true }
+                            );
+                        } else if (latestPost.dropType === 'airdrop') {
+                            embed.addFields(
+                                { name: 'Project Link', value: latestPost.projectLink ? `[Link](${latestPost.projectLink})` : 'N/A', inline: true }
+                            );
+                        }
+
+                        // Add additional links if available
+                        if (latestPost.website) {
+                            embed.addFields({ name: 'Website', value: `[Website](${latestPost.website})`, inline: true });
+                        }
+                        if (latestPost.xCom) {
+                            embed.addFields({ name: 'X.com', value: `[X.com](${latestPost.xCom})`, inline: true });
+                        }
+                        if (latestPost.telegram) {
+                            embed.addFields({ name: 'Telegram', value: `[Telegram](${latestPost.telegram})`, inline: true });
+                        }
+                        if (latestPost.discord) {
+                            embed.addFields({ name: 'Discord', value: `[Discord](${latestPost.discord})`, inline: true });
+                        }
 
                         if (latestPost.image) {
                             const imageUrl = latestPost.image; // This should be the full URL from your S3 bucket
