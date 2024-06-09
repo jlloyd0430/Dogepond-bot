@@ -53,13 +53,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
 
         try {
-            console.log(`Setting channel: ${channel.id} for guild: ${interaction.guildId} with dropType: ${dropType}`);
             const response = await axios.post(`${process.env.BACKEND_URL}/api/nftdrops/setchannel`, {
                 guildId: interaction.guildId,
                 channelId: channel.id,
                 dropType: dropType
             });
-            console.log('Response from backend:', response.data);
 
             channelConfig[interaction.guildId] = { channelId: channel.id, dropType: dropType };
             saveChannelConfig();
@@ -86,7 +84,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const dropType = interaction.options.getString('droptype');
         try {
             const url = `${process.env.BACKEND_URL}/api/nftdrops/approved?droptype=${dropType}`;
-            console.log(`Fetching data from: ${url}`);
             const response = await axios.get(url);
             const posts = response.data;
 
@@ -156,7 +153,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         try {
             const url = `${process.env.BACKEND_URL}/api/nftdrops/approved`;
-            console.log(`Fetching data from: ${url}`);
             const response = await axios.get(url);
             const posts = response.data;
 
