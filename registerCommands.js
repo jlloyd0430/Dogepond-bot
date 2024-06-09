@@ -14,7 +14,7 @@ const commands = [
                 .setDescription('The type of drops to post in this channel')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'Mint', value: 'mint' },
+                    { name: 'Mint', value: 'new mint' },
                     { name: 'Auction', value: 'auction' },
                     { name: 'Airdrop', value: 'airdrop' },
                     { name: 'Any', value: 'any' }
@@ -27,7 +27,7 @@ const commands = [
                 .setDescription('The type of drop to fetch')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'Mint', value: 'mint' },
+                    { name: 'Mint', value: 'new mint' },
                     { name: 'Auction', value: 'auction' },
                     { name: 'Airdrop', value: 'airdrop' },
                     { name: 'Any', value: 'any' }
