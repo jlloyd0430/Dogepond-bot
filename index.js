@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits, Events, EmbedBuilder, PermissionsBitField, ChannelType } = require('discord.js');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+const mongoose = require('mongoose');
+const ChannelConfig = require('./channelConfig'); // Adjust the path if necessary
 require('dotenv').config();
 
 const client = new Client({
@@ -12,19 +12,16 @@ const client = new Client({
     ]
 });
 
+mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
+    console.log('Connected to MongoDB');
+}).catch(err => {
+    console.error('Error connecting to MongoDB', err);
+});
+
 let latestPostId = null;
-const channelConfigPath = path.join(__dirname, 'channelConfig.json');
-let channelConfig = {};
-
-// Load channelConfig from file
-if (fs.existsSync(channelConfigPath)) {
-    const data = fs.readFileSync(channelConfigPath);
-    channelConfig = JSON.parse(data);
-}
-
-const saveChannelConfig = () => {
-    fs.writeFileSync(channelConfigPath, JSON.stringify(channelConfig, null, 2));
-};
 
 client.once(Events.ClientReady, () => {
     console.log('Discord bot is ready!');
@@ -53,27 +50,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }
 
         try {
-            const response = await axios.post(`${process.env.BACKEND_URL}/api/nftdrops/setchannel`, {
-                guildId: interaction.guildId,
-                channelId: channel.id,
-                dropType: dropType
-            });
-
-            channelConfig[interaction.guildId] = { channelId: channel.id, dropType: dropType };
-            saveChannelConfig();
+            await ChannelConfig.findOneAndUpdate(
+                { guildId: interaction.guildId },
+                { channelId: channel.id, dropType: dropType },
+                { upsert: true, new: true }
+            );
 
             await interaction.reply(`Set the post channel to ${channel.name} for ${dropType} drops`);
         } catch (error) {
             console.error('Error setting channel:', error);
-            if (error.response) {
-                console.error('Response data:', error.response.data);
-                console.error('Response status:', error.response.status);
-                console.error('Response headers:', error.response.headers);
-            } else if (error.request) {
-                console.error('Request data:', error.request);
-            } else {
-                console.error('Error message:', error.message);
-            }
             await interaction.reply('Error setting channel.');
         }
     }
@@ -105,7 +90,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
                     { name: 'Likes', value: latestPost.likes.length.toString(), inline: true }
                 );
 
-            // Add price info based on drop type
             if (latestPost.dropType === 'new mint') {
                 embed.addFields(
                     { name: 'Price', value: latestPost.price !== undefined ? latestPost.price.toString() : 'N/A', inline: true },
@@ -118,11 +102,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 );
             } else if (latestPost.dropType === 'airdrop') {
                 embed.addFields(
-                    { name: 'Project Link', value: latestPost.projectLink ? `[Link](${latestPost.projectLink})` : 'N/A', inline: true }
+                    { name: 'Project Link', value: latestPost.projectLink ? `[Link](${latestPost.projectLink})` : 'N/A' }
                 );
             }
 
-            // Add additional links if available
             if (latestPost.website) {
                 embed.addFields({ name: 'Website', value: `[Website](${latestPost.website})`, inline: true });
             }
@@ -137,7 +120,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
             }
 
             if (latestPost.image) {
-                const imageUrl = latestPost.image; // This should be the full URL from your S3 bucket
+                const imageUrl = latestPost.image;
                 embed.setImage(imageUrl);
             }
 
@@ -173,7 +156,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
                         { name: 'Likes', value: post.likes.length.toString(), inline: true }
                     );
 
-                // Add price info based on drop type
                 if (post.dropType === 'new mint') {
                     embed.addFields(
                         { name: 'Price', value: post.price !== undefined ? post.price.toString() : 'N/A', inline: true },
@@ -186,11 +168,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
                     );
                 } else if (post.dropType === 'airdrop') {
                     embed.addFields(
-                        { name: 'Project Link', value: post.projectLink ? `[Link](${post.projectLink})` : 'N/A', inline: true }
+                        { name: 'Project Link', value: post.projectLink ? `[Link](${post.projectLink})` : 'N/A' }
                     );
                 }
 
-                // Add additional links if available
                 if (post.website) {
                     embed.addFields({ name: 'Website', value: `[Website](${post.website})`, inline: true });
                 }
@@ -205,7 +186,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 }
 
                 if (post.image) {
-                    const imageUrl = post.image; // This should be the full URL from your S3 bucket
+                    const imageUrl = post.image;
                     embed.setImage(imageUrl);
                 }
 
@@ -223,102 +204,4 @@ client.on(Events.InteractionCreate, async (interaction) => {
 client.login(process.env.DISCORD_TOKEN);
 
 client.on('error', console.error);
-client.on('reconnecting', () => console.log('Reconnecting...'));
-client.on('resume', () => console.log('Connection resumed.'));
-client.on('disconnect', (event) => {
-    console.log(`Disconnected: ${event.reason} (${event.code})`);
-});
-
-const startPolling = () => {
-    setInterval(async () => {
-        try {
-            const url = `${process.env.BACKEND_URL}/api/nftdrops/approved`;
-            console.log(`Polling data from: ${url}`);
-
-            const response = await axios.get(url);
-            const posts = response.data;
-
-            if (posts.length > 0) {
-                const latestPost = posts[0];
-
-                if (latestPost._id !== latestPostId) {
-                    latestPostId = latestPost._id;
-
-                    for (const guildId in channelConfig) {
-                        const config = await axios.get(`${process.env.BACKEND_URL}/api/nftdrops/getchannel/${guildId}`);
-                        const channelId = config.data.channelId;
-                        const channel = client.channels.cache.get(channelId);
-                        const dropType = config.data.dropType;
-
-                        if (!channel) {
-                            console.error(`Channel not found for guild ${guildId}`);
-                            continue;
-                        }
-
-                        if (dropType !== 'any' && latestPost.dropType !== dropType) {
-                            console.log(`Skipping post of type ${latestPost.dropType} for guild ${guildId} with configured type ${dropType}`);
-                            continue;
-                        }
-
-                        const embed = new EmbedBuilder()
-                            .setTitle(latestPost.projectName)
-                            .setDescription(latestPost.description || 'No description provided.')
-                            .addFields(
-                                { name: 'Drop Type', value: latestPost.dropType, inline: true },
-                                { name: 'Date', value: latestPost.date === 'TBA' ? 'TBA' : new Date(latestPost.date).toLocaleDateString(), inline: true },
-                                { name: 'Time', value: latestPost.time, inline: true },
-                                { name: 'Supply', value: latestPost.supply.toString(), inline: true },
-                                { name: 'Likes', value: latestPost.likes.length.toString(), inline: true }
-                            );
-
-                        // Add price info based on drop type
-                        if (latestPost.dropType === 'new mint') {
-                            embed.addFields(
-                                { name: 'Price', value: latestPost.price !== undefined ? latestPost.price.toString() : 'N/A', inline: true },
-                                { name: 'Whitelist Price', value: latestPost.wlPrice !== undefined ? latestPost.wlPrice.toString() : 'N/A', inline: true }
-                            );
-                        } else if (latestPost.dropType === 'auction') {
-                            embed.addFields(
-                                { name: 'Starting Price', value: latestPost.startingPrice !== undefined ? latestPost.startingPrice.toString() : 'N/A', inline: true },
-                                { name: 'Marketplace Link', value: latestPost.marketplaceLink ? `[Link](${latestPost.marketplaceLink})` : 'N/A', inline: true }
-                            );
-                        } else if (latestPost.dropType === 'airdrop') {
-                            embed.addFields(
-                                { name: 'Project Link', value: latestPost.projectLink ? `[Link](${latestPost.projectLink})` : 'N/A', inline: true }
-                            );
-                        }
-
-                        // Add additional links if available
-                        if (latestPost.website) {
-                            embed.addFields({ name: 'Website', value: `[Website](${latestPost.website})`, inline: true });
-                        }
-                        if (latestPost.xCom) {
-                            embed.addFields({ name: 'X.com', value: `[X.com](${latestPost.xCom})`, inline: true });
-                        }
-                        if (latestPost.telegram) {
-                            embed.addFields({ name: 'Telegram', value: `[Telegram](${latestPost.telegram})`, inline: true });
-                        }
-                        if (latestPost.discord) {
-                            embed.addFields({ name: 'Discord', value: `[Discord](${latestPost.discord})`, inline: true });
-                        }
-
-                        if (latestPost.image) {
-                            const imageUrl = latestPost.image; // This should be the full URL from your S3 bucket
-                            embed.setImage(imageUrl);
-                        }
-
-                        await channel.send({ embeds: [embed] });
-                    }
-                } else {
-                    console.log('No new posts to publish.');
-                }
-            } else {
-                console.log('No posts available during polling.');
-            }
-        } catch (error) {
-            console.error('Error during polling:', error);
-        }
-    }, 60000); // Poll every 60 seconds
-};
-
-startPolling();
+client.on('reconnecting', () => console.log
